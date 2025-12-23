@@ -1,0 +1,21 @@
+[
+  {
+    "id": "c77ddae6-d10e-4098-9973-ff27ef52307c",
+    "text": "Complete NextJS",
+    "completed": true,
+    "updatedAt": "2025-12-22T22:08:32.206Z"
+  },
+  {
+    "id": "9e796956-1960-4b87-96fa-5397a1de3db5",
+    "text": "Start Todo",
+    "completed": true,
+    "createdAt": "2025-12-22T22:03:36.298Z",
+    "updatedAt": "2025-12-23T10:51:30.964Z"
+  },
+  {
+    "id": "cd72977e-db5e-4866-b770-ac1436d6b3a0",
+    "text": "hello",
+    "completed": false,
+    "createdAt": "2025-12-23T10:56:25.639Z"
+  }
+]
