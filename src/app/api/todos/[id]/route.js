@@ -1,10 +1,22 @@
 import { connectDB } from "@/app/lib/connectDB";
 import Todo from "@/app/models/Todo.model";
+import { requireAuth } from "@/app/lib/auth";
 import mongoose from "mongoose";
 
 export async function GET(request, { params }) {
   try {
     await connectDB();
+
+    const auth = requireAuth(request);
+    if (!auth.authenticated) {
+      return Response.json(
+        {
+          success: false,
+          error: auth.error,
+        },
+        { status: 401 }
+      );
+    }
 
     const { id } = await params;
 
@@ -18,13 +30,17 @@ export async function GET(request, { params }) {
       );
     }
 
-    const todo = await Todo.findById(id);
+    // Find todo and verify ownership
+    const todo = await Todo.findOne({
+      _id: id,
+      userId: auth.userId,
+    });
 
     if (!todo) {
       return Response.json(
         {
           success: false,
-          error: "Todo not found",
+          error: "Todo not found or you don't have permission",
         },
         { status: 404 }
       );
@@ -38,7 +54,7 @@ export async function GET(request, { params }) {
       { status: 200 }
     );
   } catch (error) {
-    console.error("GET Error:", error);
+    console.error("GET Todo Error:", error);
     return Response.json(
       {
         success: false,
@@ -54,6 +70,17 @@ export async function PUT(request, { params }) {
   try {
     await connectDB();
 
+    const auth = requireAuth(request);
+    if (!auth.authenticated) {
+      return Response.json(
+        {
+          success: false,
+          error: auth.error,
+        },
+        { status: 401 }
+      );
+    }
+
     const { id } = await params;
     const body = await request.json();
 
@@ -67,18 +94,27 @@ export async function PUT(request, { params }) {
       );
     }
 
-    const { _id, createdAt, updatedAt, __v, ...updateData } = body;
+    // Prevent modification of protected fields
+    const { _id, userId, createdAt, updatedAt, __v, ...updateData } = body;
 
-    const todo = await Todo.findByIdAndUpdate(id, updateData, {
-      new: true,
-      runValidators: true,
-    });
+    // Update todo and verify ownership
+    const todo = await Todo.findOneAndUpdate(
+      {
+        _id: id,
+        userId: auth.userId,
+      },
+      updateData,
+      {
+        new: true,
+        runValidators: true,
+      }
+    );
 
     if (!todo) {
       return Response.json(
         {
           success: false,
-          error: "Todo not found",
+          error: "Todo not found or you don't have permission",
         },
         { status: 404 }
       );
@@ -93,7 +129,7 @@ export async function PUT(request, { params }) {
       { status: 200 }
     );
   } catch (error) {
-    console.error("PUT Error:", error);
+    console.error("PUT Todo Error:", error);
 
     if (error.name === "ValidationError") {
       return Response.json(
@@ -123,6 +159,17 @@ export async function DELETE(request, { params }) {
   try {
     await connectDB();
 
+    const auth = requireAuth(request);
+    if (!auth.authenticated) {
+      return Response.json(
+        {
+          success: false,
+          error: auth.error,
+        },
+        { status: 401 }
+      );
+    }
+
     const { id } = await params;
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
@@ -135,13 +182,17 @@ export async function DELETE(request, { params }) {
       );
     }
 
-    const todo = await Todo.findByIdAndDelete(id);
+    // Delete todo and verify ownership
+    const todo = await Todo.findOneAndDelete({
+      _id: id,
+      userId: auth.userId,
+    });
 
     if (!todo) {
       return Response.json(
         {
           success: false,
-          error: "Todo not found",
+          error: "Todo not found or you don't have permission",
         },
         { status: 404 }
       );
@@ -156,7 +207,7 @@ export async function DELETE(request, { params }) {
       { status: 200 }
     );
   } catch (error) {
-    console.error("DELETE Error:", error);
+    console.error("DELETE Todo Error:", error);
     return Response.json(
       {
         success: false,

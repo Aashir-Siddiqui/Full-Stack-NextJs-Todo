@@ -23,16 +23,23 @@ const todoSchema = new mongoose.Schema(
       default: "general",
       trim: true,
     },
+    userId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: [true, "User ID is required"],
+      index: true,
+    },
   },
   {
-    timestamps: true, // Automatically adds createdAt and updatedAt
+    timestamps: true,
   }
 );
 
-// Add index for better query performance
-todoSchema.index({ completed: 1, createdAt: -1 });
+// Compound index for user-specific queries
+todoSchema.index({ userId: 1, createdAt: -1 });
+todoSchema.index({ userId: 1, completed: 1 });
 
-// Prevent model recompilation in development
+// Prevent model recompilation
 const Todo = mongoose.models.Todo || mongoose.model("Todo", todoSchema);
 
 export default Todo;

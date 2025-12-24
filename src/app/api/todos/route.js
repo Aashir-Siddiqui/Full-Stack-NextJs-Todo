@@ -1,17 +1,32 @@
 import { connectDB } from "@/app/lib/connectDB";
 import Todo from "@/app/models/Todo.model";
+import { requireAuth } from "@/app/lib/auth";
 
 export async function GET(request) {
   try {
     await connectDB();
 
+    const auth = requireAuth(request);
+    if (!auth.authenticated) {
+      return Response.json(
+        {
+          success: false,
+          error: auth.error,
+        },
+        { status: 401 }
+      );
+    }
+
+    // Parse query parameters for filtering
     const { searchParams } = new URL(request.url);
     const completed = searchParams.get("completed");
     const priority = searchParams.get("priority");
     const category = searchParams.get("category");
     const sort = searchParams.get("sort") || "-createdAt";
 
-    let query = {};
+    // Build query - IMPORTANT: Only get todos for this user
+    let query = { userId: auth.userId };
+
     if (completed !== null && completed !== undefined) {
       query.completed = completed === "true";
     }
@@ -22,6 +37,7 @@ export async function GET(request) {
       query.category = category;
     }
 
+    // Fetch todos for this user only
     const todos = await Todo.find(query).sort(sort).lean();
 
     return Response.json(
@@ -33,7 +49,7 @@ export async function GET(request) {
       { status: 200 }
     );
   } catch (error) {
-    console.error("GET Error:", error);
+    console.error("GET Todos Error:", error);
     return Response.json(
       {
         success: false,
@@ -48,6 +64,17 @@ export async function GET(request) {
 export async function POST(request) {
   try {
     await connectDB();
+
+    const auth = requireAuth(request);
+    if (!auth.authenticated) {
+      return Response.json(
+        {
+          success: false,
+          error: auth.error,
+        },
+        { status: 401 }
+      );
+    }
 
     const body = await request.json();
 
@@ -66,6 +93,7 @@ export async function POST(request) {
       completed: body.completed || false,
       priority: body.priority || "medium",
       category: body.category || "general",
+      userId: auth.userId,
     });
 
     return Response.json(
@@ -77,7 +105,7 @@ export async function POST(request) {
       { status: 201 }
     );
   } catch (error) {
-    console.error("POST Error:", error);
+    console.error("POST Todo Error:", error);
 
     if (error.name === "ValidationError") {
       return Response.json(
